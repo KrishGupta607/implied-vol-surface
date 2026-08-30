@@ -31,8 +31,14 @@ def fetch_chain(ticker="SPY"):
     volatility, kept only as a benchmark to check our own solver against.
     """
     tk = yf.Ticker(ticker)
-    today = pd.Timestamp.today().normalize()
-    spot = float(tk.history(period="1d")["Close"].iloc[-1])
+
+    # Time to expiry must be measured from the moment the QUOTES were set, not
+    # from the calendar date the script happens to run. Over a weekend or after
+    # hours those differ, and for a five-day contract a two-day error inflates
+    # implied volatility by well over a point.
+    history = tk.history(period="5d")
+    today = history.index[-1].tz_localize(None).normalize()
+    spot = float(history["Close"].iloc[-1])
 
     parts = []
     for expiry in pick_expiries(tk.options, today):
